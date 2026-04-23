@@ -101,11 +101,9 @@ function updateThemeIcon(theme) {
 // ============================================================
 async function loadApplianceList() {
     try {
-        const res = await fetch(`${API_BASE}/api/appliances`);
-        const data = await res.json();
-        if (data.success) {
-            AppState.availableAppliances = data.appliances;
-            AppState.applianceCategories = data.categories;
+        if (typeof EnergyEngine !== 'undefined') {
+            AppState.availableAppliances = EnergyEngine.getApplianceList();
+            AppState.applianceCategories = EnergyEngine.applianceCategories;
         }
     } catch (err) {
         console.warn('Could not load appliance list, using defaults');
@@ -205,33 +203,20 @@ async function runPrediction() {
     btn.disabled = true;
     
     try {
-        const res = await fetch(`${API_BASE}/api/predict`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                rooms,
-                occupants,
-                temperature,
-                appliances: AppState.appliances.map(a => ({
-                    name: a.name,
-                    quantity: a.quantity,
-                    hours: a.hours
-                }))
-            })
-        });
+        const appliances = AppState.appliances.map(a => ({
+            name: a.name,
+            quantity: a.quantity,
+            hours: a.hours
+        }));
         
-        const data = await res.json();
+        const prediction = EnergyEngine.predictEnergy(rooms, occupants, appliances, temperature);
         
-        if (data.success) {
-            AppState.predictionResult = data.prediction;
-            renderPredictionResults(data.prediction);
-            navigateTo('section-results');
-            showToast('Prediction complete!', 'success');
-        } else {
-            showToast(data.error || 'Prediction failed', 'error');
-        }
+        AppState.predictionResult = prediction;
+        renderPredictionResults(prediction);
+        navigateTo('section-results');
+        showToast('Prediction complete!', 'success');
     } catch (err) {
-        showToast('Connection error. Is the server running?', 'error');
+        showToast('Prediction error: ' + err.message, 'error');
         console.error(err);
     } finally {
         btn.classList.remove('btn--loading');
@@ -287,29 +272,19 @@ async function runOptimization() {
     btn.disabled = true;
     
     try {
-        const res = await fetch(`${API_BASE}/api/optimize`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                rooms,
-                occupants,
-                temperature,
-                appliances: AppState.predictionResult.appliance_breakdown
-            })
-        });
+        const optimization = EnergyEngine.optimizeSchedule(
+            AppState.predictionResult.appliance_breakdown,
+            rooms,
+            occupants,
+            temperature
+        );
         
-        const data = await res.json();
-        
-        if (data.success) {
-            AppState.optimizationResult = data.optimization;
-            renderOptimizationResults(data.optimization);
-            navigateTo('section-optimization');
-            showToast('Optimization complete!', 'success');
-        } else {
-            showToast(data.error || 'Optimization failed', 'error');
-        }
+        AppState.optimizationResult = optimization;
+        renderOptimizationResults(optimization);
+        navigateTo('section-optimization');
+        showToast('Optimization complete!', 'success');
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast('Optimization error: ' + err.message, 'error');
         console.error(err);
     } finally {
         btn.classList.remove('btn--loading');
@@ -452,32 +427,47 @@ async function runSimulation() {
     btn.disabled = true;
     
     try {
-        const res = await fetch(`${API_BASE}/api/simulate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                rooms,
-                occupants,
-                temperature,
-                appliances: AppState.appliances.map(a => ({
-                    name: a.name,
-                    quantity: a.quantity,
-                    hours: a.hours
-                }))
-            })
-        });
+        const scenarios = ['weekend', 'summer', 'winter', 'work_from_home'];
+        const baseAppliances = AppState.appliances.map(a => ({
+            name: a.name,
+            quantity: a.quantity,
+            hours: a.hours
+        }));
         
-        const data = await res.json();
+        // Get base prediction
+        const baseResult = EnergyEngine.predictEnergy(rooms, occupants, baseAppliances, temperature);
+        const results = {
+            current: {
+                daily_kwh: baseResult.daily_kwh,
+                monthly_kwh: baseResult.monthly_kwh,
+                monthly_cost: baseResult.monthly_cost
+            }
+        };
         
-        if (data.success) {
-            AppState.simulationResult = data.simulation;
-            renderSimulationResults(data.simulation);
-            showToast('Simulation complete!', 'success');
-        } else {
-            showToast(data.error || 'Simulation failed', 'error');
+        const scenarioTemps = {
+            weekend: temperature,
+            summer: Math.max(temperature, 40),
+            winter: Math.min(temperature, 18),
+            work_from_home: temperature
+        };
+        
+        for (const scenario of scenarios) {
+            const modifiedAppliances = EnergyEngine.simulateScenario(baseAppliances, scenario);
+            const simTemp = scenarioTemps[scenario];
+            const simResult = EnergyEngine.predictEnergy(rooms, occupants, modifiedAppliances, simTemp);
+            results[scenario] = {
+                daily_kwh: simResult.daily_kwh,
+                monthly_kwh: simResult.monthly_kwh,
+                monthly_cost: simResult.monthly_cost,
+                appliances: modifiedAppliances
+            };
         }
+        
+        AppState.simulationResult = results;
+        renderSimulationResults(results);
+        showToast('Simulation complete!', 'success');
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast('Simulation error: ' + err.message, 'error');
         console.error(err);
     } finally {
         btn.classList.remove('btn--loading');
