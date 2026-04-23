@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Smart Energy Consumption Optimizer — AI-powered tool to predict electricity usage, optimize schedules, and reduce energy costs for homes and hostels.">
+    <meta name="keywords" content="energy optimizer, electricity calculator, AI energy prediction, smart home, energy savings">
+    <title>Smart Energy Optimizer | HomeHostel</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- ============================================================
+         HEADER / NAVIGATION
+         ============================================================ -->
+    <header class="header" id="header">
+        <a href="#" class="header__logo" onclick="navigateTo('section-input'); return false;">
+            <div class="header__logo-icon">⚡</div>
+            <div class="header__logo-text">
+                <span>Smart Energy</span> Optimizer
+            </div>
+        </a>
+
+        <nav class="header__nav" id="main-nav" aria-label="Main navigation">
+            <button class="header__nav-btn active" data-section="section-input" id="nav-input">
+                📝 Input
+            </button>
+            <button class="header__nav-btn" data-section="section-results" id="nav-results">
+                📊 Results
+            </button>
+            <button class="header__nav-btn" data-section="section-optimization" id="nav-optimization">
+                🎯 Optimize
+            </button>
+            <button class="header__nav-btn" data-section="section-dashboard" id="nav-dashboard">
+                📈 Dashboard
+            </button>
+        </nav>
+
+        <div class="header__actions">
+            <div class="model-info">
+                <span class="model-info__dot"></span>
+                <span>AI Model Active</span>
+            </div>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle dark/light mode">
+                ☀️
+            </button>
+        </div>
+    </header>
+
+    <!-- ============================================================
+         MAIN CONTENT
+         ============================================================ -->
+    <main class="main">
+
+        <!-- ======= SECTION 1: INPUT PANEL ======= -->
+        <section class="section active" id="section-input">
+            <!-- Property Details -->
+            <div class="card">
+                <div class="card__header">
+                    <h1 class="card__title">
+                        <span class="card__title-icon">🏠</span>
+                        Property Details
+                    </h1>
+                    <span class="card__badge">Step 1 of 3</span>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="input-rooms">Number of Rooms</label>
+                        <input type="number" class="form-input" id="input-rooms" 
+                               value="3" min="1" max="20" placeholder="e.g. 3">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="input-occupants">Number of Occupants</label>
+                        <input type="number" class="form-input" id="input-occupants" 
+                               value="4" min="1" max="30" placeholder="e.g. 4">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="input-temperature">Avg. Temperature (°C)</label>
+                        <input type="number" class="form-input" id="input-temperature" 
+                               value="32" min="5" max="50" step="0.5" placeholder="e.g. 32">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appliance Configuration -->
+            <div class="card">
+                <div class="card__header">
+                    <h2 class="card__title">
+                        <span class="card__title-icon">🔌</span>
+                        Appliance Configuration
+                    </h2>
+                    <button class="btn btn--outline btn--sm" id="btn-add-appliance">
+                        + Add Appliance
+                    </button>
+                </div>
+
+                <!-- Column headers -->
+                <div class="appliance-item" style="background: transparent; border: none; padding: 0 16px 8px; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                    <span>Appliance</span>
+                    <span>Quantity</span>
+                    <span>Hours/Day</span>
+                    <span></span>
+                </div>
+
+                <div class="appliance-list" id="appliance-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2" style="flex-wrap: wrap;">
+                <button class="btn btn--primary btn--lg" id="btn-predict">
+                    ⚡ Predict Energy Usage
+                </button>
+                <button class="btn btn--outline btn--lg" id="btn-export-pdf">
+                    📄 Export Report
+                </button>
+            </div>
+        </section>
+
+        <!-- ======= SECTION 2: PREDICTION RESULTS ======= -->
+        <section class="section" id="section-results">
+            <!-- Empty State -->
+            <div id="results-empty">
+                <div class="empty-state">
+                    <div class="empty-state__icon">📊</div>
+                    <div class="empty-state__title">No Predictions Yet</div>
+                    <div class="empty-state__text">
+                        Configure your property and appliances, then click "Predict Energy Usage" to see results.
+                    </div>
+                    <button class="btn btn--primary mt-3" onclick="navigateTo('section-input')">
+                        ← Go to Input
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Content -->
+            <div id="results-content" class="hidden">
+                <!-- Stat Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card stat-card--blue">
+                        <div class="stat-card__icon">⚡</div>
+                        <div class="stat-card__value stat-card__value--blue" id="stat-daily-kwh">—</div>
+                        <div class="stat-card__label">Daily Consumption (kWh)</div>
+                    </div>
+                    <div class="stat-card stat-card--purple">
+                        <div class="stat-card__icon">📅</div>
+                        <div class="stat-card__value stat-card__value--purple" id="stat-monthly-kwh">—</div>
+                        <div class="stat-card__label">Monthly Consumption (kWh)</div>
+                    </div>
+                    <div class="stat-card stat-card--amber">
+                        <div class="stat-card__icon">💰</div>
+                        <div class="stat-card__value stat-card__value--amber" id="stat-monthly-cost">—</div>
+                        <div class="stat-card__label">Estimated Monthly Cost</div>
+                    </div>
+                    <div class="stat-card stat-card--emerald">
+                        <div class="stat-card__icon">🤖</div>
+                        <div class="stat-card__value stat-card__value--emerald" id="stat-model-accuracy">—</div>
+                        <div class="stat-card__label">Model Accuracy (R²)</div>
+                    </div>
+                </div>
+
+                <!-- Temperature impact -->
+                <div class="card" style="padding: 1rem 1.5rem;">
+                    <div class="flex-between">
+                        <span class="text-sm text-muted">🌡️ Temperature Impact on Usage</span>
+                        <span class="text-sm" id="stat-temp-impact" style="font-weight: 600;">—</span>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="results-grid mt-2">
+                    <div class="card">
+                        <div class="card__header">
+                            <h2 class="card__title">
+                                <span class="card__title-icon">🍩</span>
+                                Energy Breakdown by Appliance
+                            </h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chart-breakdown"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card__header">
+                            <h2 class="card__title">
+                                <span class="card__title-icon">📈</span>
+                                Weekly Usage Trend
+                            </h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chart-trend"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action -->
+                <div class="flex gap-2 mt-2" style="flex-wrap: wrap;">
+                    <button class="btn btn--success btn--lg" id="btn-optimize">
+                        🎯 Optimize & Save Energy
+                    </button>
+                    <button class="btn btn--outline" onclick="navigateTo('section-input')">
+                        ← Edit Inputs
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======= SECTION 3: OPTIMIZATION ======= -->
+        <section class="section" id="section-optimization">
+            <!-- Empty State -->
+            <div id="optimization-empty">
+                <div class="empty-state">
+                    <div class="empty-state__icon">🎯</div>
+                    <div class="empty-state__title">No Optimization Yet</div>
+                    <div class="empty-state__text">
+                        Run a prediction first, then click "Optimize" to get energy-saving recommendations.
+                    </div>
+                    <button class="btn btn--primary mt-3" onclick="navigateTo('section-results')">
+                        ← Go to Results
+                    </button>
+                </div>
+            </div>
+
+            <!-- Optimization Content -->
+            <div id="optimization-content" class="hidden">
+                <!-- Savings Comparison -->
+                <div class="card">
+                    <div class="card__header">
+                        <h2 class="card__title">
+                            <span class="card__title-icon">💡</span>
+                            Savings Comparison
+                        </h2>
+                    </div>
+                    <div class="savings-comparison">
+                        <div class="savings-column">
+                            <div class="savings-column__label">Current Usage</div>
+                            <div class="savings-column__value stat-card__value--rose" id="opt-original-kwh">—</div>
+                            <div class="savings-column__sub" id="opt-original-cost">—</div>
+                        </div>
+                        <div class="savings-arrow">
+                            <div class="savings-arrow__icon">→</div>
+                            <div class="savings-arrow__percent" id="opt-saving-percent">—</div>
+                        </div>
+                        <div class="savings-column">
+                            <div class="savings-column__label">Optimized Usage</div>
+                            <div class="savings-column__value stat-card__value--emerald" id="opt-optimized-kwh">—</div>
+                            <div class="savings-column__sub" id="opt-optimized-cost">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats + Efficiency -->
+                <div class="results-grid">
+                    <!-- Savings Stats -->
+                    <div class="card">
+                        <div class="card__header">
+                            <h2 class="card__title">
+                                <span class="card__title-icon">💰</span>
+                                Your Savings
+                            </h2>
+                        </div>
+                        <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="stat-card stat-card--emerald" style="padding: 1rem;">
+                                <div class="stat-card__value stat-card__value--emerald" id="opt-stat-daily" style="font-size: 1.4rem;">—</div>
+                                <div class="stat-card__label">Daily Saving</div>
+                            </div>
+                            <div class="stat-card stat-card--blue" style="padding: 1rem;">
+                                <div class="stat-card__value stat-card__value--blue" id="opt-stat-monthly" style="font-size: 1.4rem;">—</div>
+                                <div class="stat-card__label">Monthly Saving</div>
+                            </div>
+                            <div class="stat-card stat-card--purple" style="padding: 1rem;">
+                                <div class="stat-card__value stat-card__value--purple" id="opt-stat-yearly" style="font-size: 1.4rem;">—</div>
+                                <div class="stat-card__label">Yearly Saving</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Efficiency Rating -->
+                    <div class="card">
+                        <div class="card__header">
+                            <h2 class="card__title">
+                                <span class="card__title-icon">⭐</span>
+                                Efficiency Rating
+                            </h2>
+                        </div>
+                        <div class="efficiency-badge">
+                            <div class="efficiency-circle" id="efficiency-circle">
+                                <div class="efficiency-grade" id="efficiency-grade">—</div>
+                                <div class="efficiency-score" id="efficiency-score">—</div>
+                            </div>
+                            <div class="efficiency-label" id="efficiency-label">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Chart -->
+                <div class="card">
+                    <div class="card__header">
+                        <h2 class="card__title">
+                            <span class="card__title-icon">📊</span>
+                            Before vs After Optimization
+                        </h2>
+                    </div>
+                    <div class="chart-container" style="height: 350px;">
+                        <canvas id="chart-comparison"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="card">
+                    <div class="card__header">
+                        <h2 class="card__title">
+                            <span class="card__title-icon">💡</span>
+                            AI Recommendations
+                        </h2>
+                        <span class="card__badge">Personalized</span>
+                    </div>
+                    <div class="recommendation-list" id="recommendation-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Optimized Schedule -->
+                <div class="card">
+                    <div class="card__header">
+                        <h2 class="card__title">
+                            <span class="card__title-icon">📅</span>
+                            Optimized Daily Schedule
+                        </h2>
+                    </div>
+                    <div class="schedule-grid" id="schedule-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- General Tips -->
+                <div class="card">
+                    <div class="card__header">
+                        <h2 class="card__title">
+                            <span class="card__title-icon">🌱</span>
+                            General Energy-Saving Tips
+                        </h2>
+                    </div>
+                    <div class="tips-grid" id="tips-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======= SECTION 4: DASHBOARD / SIMULATION ======= -->
+        <section class="section" id="section-dashboard">
+            <!-- Simulation Controls -->
+            <div class="card">
+                <div class="card__header">
+                    <h2 class="card__title">
+                        <span class="card__title-icon">🔬</span>
+                        Simulation Mode
+                    </h2>
+                    <span class="card__badge">What-If Analysis</span>
+                </div>
+                <p class="text-muted text-sm mb-2">
+                    Simulate how your energy usage changes across different scenarios — weekends, seasons, and work-from-home days.
+                </p>
+                <button class="btn btn--primary" id="btn-simulate">
+                    🚀 Run All Scenarios
+                </button>
+            </div>
+
+            <!-- Empty State -->
+            <div id="simulation-empty">
+                <div class="empty-state">
+                    <div class="empty-state__icon">🔬</div>
+                    <div class="empty-state__title">No Simulations Yet</div>
+                    <div class="empty-state__text">
+                        Click "Run All Scenarios" to see how your energy usage varies across different situations.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Content -->
+            <div id="simulation-content" class="hidden">
+                <!-- Scenario Charts -->
+                <div class="results-grid">
+                    <div class="card">
+                        <div class="card__header">
+                            <h2 class="card__title">
+                                <span class="card__title-icon">⚡</span>
+                                Daily Usage by Scenario
+                            </h2>
+                        </div>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="chart-scenario"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card__header">
+                            <h2 class="card__title">
+                                <span class="card__title-icon">💰</span>
+                                Monthly Cost by Scenario
+                            </h2>
+                        </div>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="chart-cost"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Table -->
+                <div class="card">
+                    <div class="card__header">
+                        <h2 class="card__title">
+                            <span class="card__title-icon">📋</span>
+                            Scenario Comparison
+                        </h2>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <th style="padding: 12px; text-align: left; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Scenario</th>
+                                    <th style="padding: 12px; text-align: left; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Daily kWh</th>
+                                    <th style="padding: 12px; text-align: left; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Monthly kWh</th>
+                                    <th style="padding: 12px; text-align: left; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Monthly Cost</th>
+                                    <th style="padding: 12px; text-align: left; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">vs Current</th>
+                                </tr>
+                            </thead>
+                            <tbody id="simulation-table-body">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
